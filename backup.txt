@@ -1,0 +1,207 @@
+import sas.*;
+import java.awt.Color;
+import javax.sound.sampled.*;
+import java.io.File;
+
+public class MemoryGame {
+    private View view;
+    public Text gameOver;
+    public Text roundsCompleted;
+    public Rectangle cards[][] = new Rectangle[2][2];
+    public Color colors[] = new Color[4];
+    public int coordinates[][][] = new int[20000000][2][2];
+    int roundPublic = 0;
+    public int scaled;
+    Rectangle orderOfCards[];
+    public Rectangle currentRectangle = null;
+
+    public MemoryGame(int scale) {
+        scaled = scale;
+        int eXtra = scale/30;
+        int cardSize = (scale - 3 * eXtra) / 2;  // Size of each card
+        int spacing = eXtra;  // Space between cards and edges
+        
+        // Calculate total width needed (2 cards + 3 spaces)
+        int totalWidth = cardSize * 2 + spacing * 3;
+        
+        view = new View(totalWidth, totalWidth, "Memory Game");
+        view.setBackgroundColor(Color.black);
+        
+        colors = new Color[]{
+            new Color(255, 153, 153), // Soft red
+            new Color(153, 204, 255), // Soft blue
+            new Color(153, 255, 153), // Soft green
+            new Color(255, 255, 204)  // Soft yellow
+        };
+        int colorIndex = 0;
+
+        for(int i = 0; i < cards.length; i++) {
+            for(int j = 0; j < cards.length; j++) {
+                int x = spacing + (cardSize + spacing) * i;
+                int y = spacing + (cardSize + spacing) * j;
+                cards[i][j] = new Rectangle(x, y, cardSize, cardSize);
+                cards[i][j].setColor(colors[colorIndex++]);
+            }
+        }
+    }
+
+    public void start() {
+        int maxRounds = 20000000;
+        for(int round = 0; round <= maxRounds; round++) {
+            System.out.println("Round " + round + " starting...");
+            roundPublic = round;
+
+            // Show the sequence
+            if(round > 0) {  // Show previous sequence
+                for(int i = 0; i < round; i++) {
+                    int pos1 = savedCoordinates[i][0];
+                    int pos2 = savedCoordinates[i][1];
+                    changeColor(pos1, pos2);
+                    view.wait(500);
+                }
+            }
+            
+            // Add new card to sequence
+            random();
+            view.wait(500);
+
+            // Check player's answer
+            if(!answer()) {
+                System.out.println("Game Over at round " + round);
+                for(int i = 0; i < cards.length; i++) {
+                    for(int j = 0; j < cards.length; j++) {
+                        cards[i][j].setColor(Color.BLACK);
+                        String str = Integer.toString(roundPublic);
+                        gameOver = new Text(3,3,"Game Over",Color.WHITE);
+                        roundsCompleted = new Text(3,3,str,Color.WHITE);
+                        centerText("Game Over", gameOver, scaled/10, true);
+                        centerText(str, roundsCompleted, scaled/15, false);
+                    }
+                }
+                return;  // Add this line to end the game
+                
+            }
+
+            System.out.println("Round " + round + " completed!");
+            view.wait(500);
+        }
+    }
+
+    public void centerText(String text, Text textObject, int fontSize, boolean offset) {
+        // Set font size first as it affects text dimensions
+        textObject.setFontSerif(true, fontSize);
+        
+        // Calculate total width and height of view
+        int viewWidth = scaled;
+        int viewHeight = scaled;
+        
+        // Approximate text width and height based on font size
+        // Font width is typically around 60% of height for most fonts
+        int textWidth = text.length() * (int)(fontSize * 0.6);
+        int textHeight = fontSize;
+        
+        // Calculate center positions
+        int xCenter = (viewWidth - textWidth) / 2;
+        int yCenter = (viewHeight - textHeight) / 2;
+        
+        // Move text to centered position
+        if (offset == true) {
+            textObject.moveTo(xCenter, yCenter - scaled*0.075);
+            System.out.println(yCenter*0.5);
+            textObject.setHidden(false);
+        } else {
+            textObject.moveTo(xCenter, yCenter+scaled*0.075);
+        }
+    }
+
+    public boolean answer() {
+        int countClicks = 0;
+        while(countClicks <= roundPublic) {  // Changed < to <= to match round count
+            for(int i = 0; i < cards.length; i++) {
+                for(int j = 0; j < cards.length; j++) {
+                    if(cards[i][j].mousePressed()) {
+                        animate(i,j);
+                        // Compare coordinates instead of Rectangle references
+                        if(i != savedCoordinates[countClicks][0] || j != savedCoordinates[countClicks][1]) {
+                            System.out.println("Clicked: [" + i + "][" + j + "]");
+                            System.out.println("Expected: [" + savedCoordinates[countClicks][0] + 
+                                            "][" + savedCoordinates[countClicks][1] + "]");
+                            System.out.println("Wrong sequence! Game Over!");
+                            return false;
+                        }
+                        countClicks++;
+                        System.out.println("Correct click at: [" + i + "][" + j + "]");
+                        view.wait(200);
+
+                        if(countClicks > roundPublic) {  // Changed == to >
+                            System.out.println("Correct sequence!");
+                            return true;
+                        }
+                    }
+                }
+            }
+            view.wait(10);  // Small delay to prevent CPU overuse
+        }
+        return false;  // Changed from true to false to prevent infinite loop
+    }
+
+    public void animate(int pos1, int pos2) {
+        playSound("click");  // Add this line at the start
+        // Flash the clicked card
+        Rectangle clickedCard = cards[pos1][pos2];
+        Color originalColor = clickedCard.getColor();
+        clickedCard.setColor(Color.WHITE);
+        view.wait(200);
+        clickedCard.setColor(originalColor);
+    }
+    // Change the array declaration to a simpler 2D array
+    private int[][] savedCoordinates = new int[20000000][2];  // [sequence number][coordinates]
+
+    public void random() {
+        int randomCardI = (int)(Math.random()*2);
+        int randomCardJ = (int)(Math.random()*2);
+        // Save the coordinates at the current position
+        savedCoordinates[roundPublic][0] = randomCardI;
+        savedCoordinates[roundPublic][1] = randomCardJ;
+        changeColor(randomCardI, randomCardJ);
+    }
+
+    public void changeColor(int CardI,int CardJ) {
+        playSound("ping");  // Add this line at the start
+        //set random card to white
+        
+        Color currentColor = cards[CardI][CardJ].getColor();
+
+        // Make the color more saturated using HSB color model
+        float[] hsb = Color.RGBtoHSB(
+            currentColor.getRed(),
+            currentColor.getGreen(),
+            currentColor.getBlue(),
+            null
+        );
+
+        // Increase saturation by 50% and decrease brightness by 30%
+        Color saturatedColor = Color.getHSBColor(
+            hsb[0], // Keep the same hue
+            Math.min(1.0f, hsb[1] * 1.9f), // Increase saturation
+            Math.max(0.0f, hsb[2] * 0.5f)  // Decrease brightness
+        );
+
+        cards[CardI][CardJ].setColor(saturatedColor);
+        view.wait(350);
+        cards[CardI][CardJ].setColor(currentColor);
+        currentRectangle = cards[CardI][CardJ];
+    }
+
+    private void playSound(String soundName) {
+        try {
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(
+                new File("sounds/" + soundName + ".wav"));
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioInputStream);
+            clip.start();
+        } catch (Exception e) {
+            System.out.println("Error playing sound: " + e.getMessage());
+        }
+    }
+}

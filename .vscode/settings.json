@@ -1,0 +1,6 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "/Users/maxreif/Downloads/IServ 5.7.jar"
+    ]
+}
