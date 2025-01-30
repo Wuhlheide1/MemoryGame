@@ -21,10 +21,10 @@ public class MemoryGame {
     };
 
     public MemoryGame(int scale) {
+        int spacing = scale/50;
         scaled = scale;
-        int eXtra = scale/50;
-        int cardSize = (scale - 3 * eXtra) / 2;
-        int spacing = eXtra;
+        int cardSize = (scale - 3 * spacing) / 2;
+        
         int totalWidth = cardSize * 2 + spacing * 3;
         
         view = new View(totalWidth, totalWidth, "Memory Game");
@@ -59,7 +59,10 @@ public class MemoryGame {
 
             if(!answer()) {
                 showGameOver();
-                return;
+                while(!view.keyEnterPressed()) {
+                    view.wait(10);
+                }
+                restart();
             }
             view.wait(500);
         }
@@ -165,5 +168,28 @@ public class MemoryGame {
             clip.open(audioInputStream);
             clip.start();
         } catch (Exception e) {}
+    }
+
+    private void restart() {
+        // Reset game state
+        roundPublic = 0;
+        savedCoordinates = new int[20000000][2];
+        
+        // Clear game over text
+        if (gameOver != null) {
+            view.remove(gameOver);
+            view.remove(roundsCompleted);
+        }
+        
+        // Reset card colors
+        int colorIndex = 0;
+        for(int i = 0; i < cards.length; i++) {
+            for(int j = 0; j < cards.length; j++) {
+                cards[i][j].setColor(colors[colorIndex++]);
+            }
+        }
+        
+        // Start new game
+        start();
     }
 }
