@@ -1,0 +1,2 @@
+Main-Class: Main
+Class-Path: IServ 5.7.jar
