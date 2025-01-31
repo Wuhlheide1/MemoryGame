@@ -2,6 +2,8 @@ import sas.*;
 import java.awt.Color;
 import javax.sound.sampled.*;
 import java.io.File;
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 
 public class MemoryGame {
     private View view;
@@ -162,12 +164,29 @@ public class MemoryGame {
 
     private void playSound(String soundName) {
         try {
-            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(
-                new File("sounds/" + soundName + ".wav"));
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioInputStream);
-            clip.start();
-        } catch (Exception e) {}
+            // Try multiple ways to load the sound file
+            AudioInputStream audioInputStream = null;
+            File soundFile = new File("sounds/" + soundName + ".wav");
+            
+            if (soundFile.exists()) {
+                // Try loading from file system first
+                audioInputStream = AudioSystem.getAudioInputStream(soundFile);
+            } else {
+                // Try loading from resources/jar
+                InputStream resourceStream = getClass().getResourceAsStream("/sounds/" + soundName + ".wav");
+                if (resourceStream != null) {
+                    audioInputStream = AudioSystem.getAudioInputStream(new BufferedInputStream(resourceStream));
+                }
+            }
+            
+            if (audioInputStream != null) {
+                Clip clip = AudioSystem.getClip();
+                clip.open(audioInputStream);
+                clip.start();
+            }
+        } catch (Exception e) {
+            e.printStackTrace(); // This will help us see what's going wrong
+        }
     }
 
     private void restart() {
